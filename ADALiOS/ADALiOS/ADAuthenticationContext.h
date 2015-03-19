@@ -34,6 +34,9 @@ typedef UIWebView WebViewType;
 typedef WebView   WebViewType;
 #endif
 
+//Used for the callback of obtaining the OAuth2 code:
+typedef void(^ADAuthorizationCodeCallback)(NSString*, ADAuthenticationError*);
+
 @class UIViewController;
 
 typedef enum
@@ -313,6 +316,14 @@ typedef void(^ADAuthenticationCallback)(ADAuthenticationResult* result);
                           clientId: (NSString*) clientId
                           resource: (NSString*) resource
                    completionBlock: (ADAuthenticationCallback) completionBlock;
+
+-(void) requestCodeByResource: (NSString*) resource
+                     clientId: (NSString*) clientId
+                  redirectUri: (NSURL*) redirectUri
+                       userId: (NSString*) userId
+               promptBehavior: (ADPromptBehavior) promptBehavior
+         extraQueryParameters: (NSString*) queryParams
+                   completion: (ADAuthorizationCodeCallback) completionBlock;
 
 @end
 

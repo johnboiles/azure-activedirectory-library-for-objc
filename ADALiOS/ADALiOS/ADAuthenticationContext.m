@@ -40,8 +40,6 @@ NSString* const unknownError = @"Uknown error.";
 NSString* const credentialsNeeded = @"The user credentials are need to obtain access token. Please call the non-silent acquireTokenWithResource methods.";
 NSString* const serverError = @"The authentication server returned an error: %@.";
 
-//Used for the callback of obtaining the OAuth2 code:
-typedef void(^ADAuthorizationCodeCallback)(NSString*, ADAuthenticationError*);
 static volatile int sDialogInProgress = 0;
 
 BOOL isCorrelationIdUserProvided = NO;
@@ -1490,7 +1488,21 @@ return; \
      }];
 }
 
+-(void) requestCodeByResource: (NSString*) resource
+                     clientId: (NSString*) clientId
+                  redirectUri: (NSURL*) redirectUri
+                       userId: (NSString*) userId
+               promptBehavior: (ADPromptBehavior) promptBehavior
+         extraQueryParameters: (NSString*) queryParams
+                   completion: (ADAuthorizationCodeCallback) completionBlock
+{
+    THROW_ON_NIL_ARGUMENT(completionBlock);
+    
+    NSUUID* correlationId = nil;
+    [self updateCorrelationId:&correlationId];
 
+    [self requestCodeByResource:resource clientId:clientId redirectUri:redirectUri scope:nil userId:userId promptBehavior:promptBehavior extraQueryParameters:queryParams correlationId:correlationId completion:completionBlock];
+}
 
 // Generic OAuth2 Authorization Request, obtains a token from a SAML assertion.
 - (void)requestTokenByAssertion: (NSString *) samlAssertion
