@@ -55,6 +55,7 @@
 - (void)request:(NSString *)authorizationServer
     requestData:(NSDictionary *)request_data
 requestCorrelationId: (NSUUID*) requestCorrelationId
+extraQueryParameters: (NSString*) queryParams
 isHandlingPKeyAuthChallenge: (BOOL) isHandlingPKeyAuthChallenge
 additionalHeaders:(NSDictionary *)additionalHeaders
      completion:( void (^)(NSDictionary *) )completionBlock

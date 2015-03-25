@@ -688,7 +688,7 @@ return; \
     THROW_ON_NIL_ARGUMENT(correlationId);
     if (!*correlationId || !isCorrelationIdUserProvided)
     {
-       [ADLogger setCorrelationId:[NSUUID UUID]];
+        [ADLogger setCorrelationId:[NSUUID UUID]];
         *correlationId = [self getCorrelationId];
     }
 }
@@ -1120,6 +1120,7 @@ return; \
                        [self request:self.authority
                          requestData:request_data
                 requestCorrelationId:correlationId
+                extraQueryParameters:nil
          isHandlingPKeyAuthChallenge:FALSE
                    additionalHeaders:nil
                           completion:^(NSDictionary *response)
@@ -1515,7 +1516,15 @@ return; \
                                          clientId, OAUTH2_CLIENT_ID,
                                          resource, OAUTH2_RESOURCE,
                                          nil];
-    [self executeRequest:self.authority requestData:request_data resource:resource clientId:clientId requestCorrelationId:correlationId isHandlingPKeyAuthChallenge:NO additionalHeaders:nil completion:completionBlock];
+    [self executeRequest:self.authority
+             requestData:request_data
+                resource:resource
+                clientId:clientId
+    requestCorrelationId:correlationId
+    extraQueryParameters:nil
+isHandlingPKeyAuthChallenge:NO
+       additionalHeaders:nil
+              completion:completionBlock];
 }
 
 - (NSString*) getAssertionTypeGrantValue:(ADAssertionType) assertionType
@@ -1531,11 +1540,31 @@ return; \
     return nil;
 }
 
+- (void)requestTokenByCode: (NSString *) code
+                  resource: (NSString *) resource
+                  clientId: (NSString*) clientId
+               redirectUri: (NSURL*) redirectUri
+                     scope: (NSString*) scope
+             correlationId: (NSUUID*) correlationId
+                completion: (ADAuthenticationCallback) completionBlock
+{
+    [self requestTokenByCode:code
+                    resource:resource
+                    clientId:clientId
+                 redirectUri:redirectUri
+        extraQueryParameters:nil
+                       scope:scope
+               correlationId:correlationId
+                  completion:completionBlock];
+}
+
+
 // Generic OAuth2 Authorization Request, obtains a token from an authorization code.
 - (void)requestTokenByCode: (NSString *) code
                   resource: (NSString *) resource
                   clientId: (NSString*) clientId
                redirectUri: (NSURL*) redirectUri
+      extraQueryParameters: (NSString*) queryParams
                      scope: (NSString*) scope
              correlationId: (NSUUID*) correlationId
                 completion: (ADAuthenticationCallback) completionBlock
@@ -1552,7 +1581,15 @@ return; \
                                          [redirectUri absoluteString], OAUTH2_REDIRECT_URI,
                                          nil];
     
-    [self executeRequest:self.authority requestData:request_data resource:resource clientId:clientId requestCorrelationId:correlationId isHandlingPKeyAuthChallenge:NO additionalHeaders:nil completion:completionBlock];
+    [self executeRequest:self.authority
+             requestData:request_data
+                resource:resource
+                clientId:clientId
+    requestCorrelationId:correlationId
+    extraQueryParameters:queryParams
+isHandlingPKeyAuthChallenge:NO
+       additionalHeaders:nil
+              completion:completionBlock];
 }
 
 
@@ -1561,6 +1598,7 @@ return; \
               resource: (NSString *) resource
               clientId: (NSString*) clientId
   requestCorrelationId: (NSUUID*) requestCorrelationId
+  extraQueryParameters: (NSString*) queryParams
 isHandlingPKeyAuthChallenge: (BOOL) isHandlingPKeyAuthChallenge
      additionalHeaders:(NSDictionary *)additionalHeaders
             completion: (ADAuthenticationCallback) completionBlock
@@ -1568,6 +1606,7 @@ isHandlingPKeyAuthChallenge: (BOOL) isHandlingPKeyAuthChallenge
     [self request:authorizationServer
       requestData:request_data
 requestCorrelationId:requestCorrelationId
+extraQueryParameters:queryParams
 isHandlingPKeyAuthChallenge:isHandlingPKeyAuthChallenge
 additionalHeaders:additionalHeaders
        completion:^(NSDictionary *response)
@@ -1586,6 +1625,7 @@ additionalHeaders:additionalHeaders
 - (void)request:(NSString *)authorizationServer
     requestData:(NSDictionary *)request_data
 requestCorrelationId: (NSUUID*) requestCorrelationId
+extraQueryParameters: (NSString*) queryParams
 isHandlingPKeyAuthChallenge: (BOOL) isHandlingPKeyAuthChallenge
 additionalHeaders:(NSDictionary *)additionalHeaders
      completion:( void (^)(NSDictionary *) )completionBlock
@@ -1594,6 +1634,10 @@ additionalHeaders:(NSDictionary *)additionalHeaders
     
     if(!isHandlingPKeyAuthChallenge){
         endPoint = [authorizationServer stringByAppendingString:OAUTH2_TOKEN_SUFFIX];
+        if(queryParams)
+        {
+            endPoint = [NSString stringWithFormat:@"%@?%@", endPoint, queryParams];
+        }
     }
     
     ADWebRequest *webRequest = [[ADWebRequest alloc] initWithURL:[NSURL URLWithString:endPoint]
@@ -1602,7 +1646,7 @@ additionalHeaders:(NSDictionary *)additionalHeaders
     webRequest.method = HTTPPost;
     [webRequest.headers setObject:@"application/json" forKey:@"Accept"];
     [webRequest.headers setObject:@"application/x-www-form-urlencoded" forKey:@"Content-Type"];
-    [webRequest.headers setObject:pKeyAuthHeaderVersion forKey:pKeyAuthHeader];    
+    [webRequest.headers setObject:pKeyAuthHeaderVersion forKey:pKeyAuthHeader];
     if(additionalHeaders){
         for (NSString* key in [additionalHeaders allKeys] ) {
             [webRequest.headers setObject:[additionalHeaders objectForKey:key ] forKey:key];
@@ -1637,7 +1681,11 @@ additionalHeaders:(NSDictionary *)additionalHeaders
                     if(!isHandlingPKeyAuthChallenge){
                         NSString* wwwAuthValue = [headers valueForKey:wwwAuthenticateHeader];
                         if(![NSString adIsStringNilOrBlank:wwwAuthValue] && [wwwAuthValue adContainsString:pKeyAuthName]){
-                            [self handlePKeyAuthChallenge:endPoint wwwAuthHeaderValue:wwwAuthValue requestData:request_data requestCorrelationId:requestCorrelationId completion:completionBlock];
+                            [self handlePKeyAuthChallenge:endPoint
+                                       wwwAuthHeaderValue:wwwAuthValue
+                                              requestData:request_data
+                                     requestCorrelationId:requestCorrelationId
+                                               completion:completionBlock];
                             return;
                         }
                     }
@@ -1728,7 +1776,13 @@ additionalHeaders:(NSDictionary *)additionalHeaders
     [headerKeyValuePair removeAllObjects];
     [headerKeyValuePair setObject:authHeader forKey:@"Authorization"];
     
-    [self request:authorizationServer requestData:request_data requestCorrelationId:requestCorrelationId isHandlingPKeyAuthChallenge:TRUE additionalHeaders:headerKeyValuePair completion:completionBlock];
+    [self request:authorizationServer
+      requestData:request_data
+requestCorrelationId:requestCorrelationId
+extraQueryParameters: nil
+isHandlingPKeyAuthChallenge:TRUE
+additionalHeaders:headerKeyValuePair
+       completion:completionBlock];
 }
 
 @end
