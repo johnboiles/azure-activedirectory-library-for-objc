@@ -16,6 +16,8 @@
 		<string></string>
 		<key>Password</key>
 		<string>~test123</string>
+		<key>ExtraQueryParameters</key>
+		<string>nux=1</string>
 		<key>RequestTimeout</key>
 		<integer>30</integer>
 		<key>SupportsValidation</key>

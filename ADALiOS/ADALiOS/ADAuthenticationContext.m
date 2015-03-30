@@ -919,6 +919,7 @@ return; \
                                                 resource:resource
                                                 clientId:clientId
                                              redirectUri:redirectUri
+                                    extraQueryParameters:queryParams
                                                    scope:scope
                                            correlationId:correlationId
                                               completion:^(ADAuthenticationResult *result)
